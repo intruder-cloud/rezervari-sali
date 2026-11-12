@@ -1,0 +1,35 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "ariana.niculicea@gmail.com";
+    }
+
+    match /bookings/{bookingId} {
+      // Oricine accesează pagina de rezervări poate vedea intervalele ocupate.
+      allow read: if true;
+
+      // Utilizatorii pot face o rezervare doar intre orele de munca.
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          "room", "date", "start", "end", "person", "purpose", "createdAt"
+        ])
+        && request.resource.data.room in ["ALFA", "OMEGA"]
+        && request.resource.data.date is string
+        && request.resource.data.start is string
+        && request.resource.data.end is string
+        && request.resource.data.start >= "08:00"
+        && request.resource.data.end <= "18:00"
+        && request.resource.data.start < request.resource.data.end
+        && request.resource.data.person is string
+        && request.resource.data.person.size() > 0
+        && request.resource.data.person.size() <= 60
+        && request.resource.data.purpose is string
+        && request.resource.data.purpose.size() <= 100;
+
+      allow update, delete: if isAdmin();
+    }
+  }
+}
