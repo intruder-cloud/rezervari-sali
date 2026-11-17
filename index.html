@@ -54,12 +54,11 @@ button.secondary{border:1px solid var(--line);background:#fff;color:var(--ink);b
 <main>
   <header class="top"><div><h1>Rezervare <span>Săli de Ședință</span></h1><p>Birou · Etaj 1 · Alege sala și intervalul dorit</p></div><div class="tag">RENAULT GROUP<small>DRIVE THE FUTURE</small></div></header>
   <div id="notice" class="notice">o sa folosim firebare pta autentificare</div>
-<section class="stats" style="display:none !important"></section>
-    <div class="stat"><label>Săli disponibile acum</label><strong id="available">2</strong></div>
-    <div class="stat"><label>Rezervări astăzi</label><strong id="todayCount">0</strong></div>
-    <div class="stat"><label>Săli ocupate acum</label><strong id="busyNow">0</strong></div>
-    <div class="stat"><label>Program</label><strong style="font-size:22px">07–18</strong></div>
-  </section>
+<div hidden>
+  <span id="available"></span>
+  <span id="todayCount"></span>
+  <span id="busyNow"></span>
+</div>
   <section id="homeView">
     <div class="content">
       <div>
