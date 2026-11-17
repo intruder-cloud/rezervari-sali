@@ -55,7 +55,7 @@ button.secondary{border:1px solid var(--line);background:#fff;color:var(--ink);b
     <div class="stat"><label>Săli disponibile acum</label><strong id="available">2</strong></div>
     <div class="stat"><label>Rezervări astăzi</label><strong id="todayCount">0</strong></div>
     <div class="stat"><label>Săli ocupate acum</label><strong id="busyNow">0</strong></div>
-    <div class="stat"><label>Program</label><strong style="font-size:22px">08–18</strong></div>
+    <div class="stat"><label>Program</label><strong style="font-size:22px">07–18</strong></div>
   </section>
   <section id="homeView">
     <div class="content">
@@ -78,19 +78,115 @@ button.secondary{border:1px solid var(--line);background:#fff;color:var(--ink);b
       <button class="primary" type="submit">Confirmă rezervarea</button>
     </form>
   </section>
-  <section id="listView" class="panel hidden"><h2>TOATE REZERVĂRILE</h2><div class="row"><div><label for="filterDate">Filtrează după dată</label><input type="date" id="filterDate"></div><div><label for="filterRoom">Sală</label><select id="filterRoom"><option value="">Toate sălile</option><option>ALFA</option><option>OMEGA</option></select></div></div><div class="booking-list" id="allBookings" style="margin-top:15px"></div></section>
-  <section id="adminView" class="panel hidden">
-    <h2>SETĂRI ADMINISTRATOR</h2>
-    <div id="adminLogin"><p class="small">Autentificare rezervată administratorului.</p><form id="loginForm"><div><label for="email">Email administrator</label><input id="email" type="email" autocomplete="username" required></div><div><label for="password">Parolă</label><input id="password" type="password" autocomplete="current-password" required></div><button class="primary">Autentificare</button></form></div>
-    <div id="adminTools" class="hidden"><div class="adminbar"><b>Ești conectat ca administrator</b><button class="secondary" id="logout">Deconectare</button></div><p class="small">Administratorul poate anula rezervări. Pentru a schimba programul sau conturile, folosește setările Firebase descrise în README.</p><div id="adminBookings" class="booking-list"></div></div>
-  </section>
+<section id="listView" class="panel hidden">
+  <h2>REZERVĂRI ACTIVE</h2>
+
+  <div class="row">
+    <div>
+      <label for="filterDate">Filtrează după dată</label>
+      <input type="date" id="filterDate">
+    </div>
+
+    <div>
+      <label for="filterRoom">Sală</label>
+      <select id="filterRoom">
+        <option value="">Toate sălile</option>
+        <option>ALFA</option>
+        <option>OMEGA</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="booking-list"
+       id="allBookings"
+       style="margin-top:15px"></div>
+
+  <h2 style="margin-top:30px">ISTORIC / ARHIVĂ</h2>
+
+  <div class="booking-list" id="bookingArchive"></div>
+</section>
+<section id="adminView" class="panel hidden">
+  <h2>SETĂRI ADMINISTRATOR</h2>
+
+  <div id="adminLogin">
+    <p class="small">
+      Autentificare rezervată administratorului.
+    </p>
+
+    <form id="loginForm">
+      <div>
+        <label for="email">Email administrator</label>
+        <input id="email" type="email" autocomplete="username" required>
+      </div>
+
+      <div>
+        <label for="password">Parolă</label>
+        <input id="password" type="password"
+               autocomplete="current-password" required>
+      </div>
+
+      <button class="primary" type="submit">
+        Autentificare
+      </button>
+    </form>
+  </div>
+
+  <div id="adminTools" class="hidden">
+    <div class="adminbar">
+      <b>Ești conectat ca administrator</b>
+      <button class="secondary" id="logout">
+        Deconectare
+      </button>
+    </div>
+
+    <div id="adminBookings" class="booking-list"></div>
+
+    <div style="margin-top:25px">
+      <h2>SCHIMBĂ PAROLA ADMINISTRATORULUI</h2>
+
+      <form id="changePasswordForm">
+        <div>
+          <label for="oldPassword">Parola actuală</label>
+          <input id="oldPassword" type="password"
+                 autocomplete="current-password" required>
+        </div>
+
+        <div>
+          <label for="newPassword">Parola nouă</label>
+          <input id="newPassword" type="password"
+                 autocomplete="new-password"
+                 minlength="12" required>
+        </div>
+
+        <div>
+          <label for="confirmPassword">Confirmă parola nouă</label>
+          <input id="confirmPassword" type="password"
+                 autocomplete="new-password"
+                 minlength="12" required>
+        </div>
+
+        <button class="primary" type="submit">
+          Schimbă parola
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
   <footer class="small" style="text-align:center;padding:10px">REZERVARE SĂLI · INTERN</footer>
 </main>
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, onSnapshot, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 
 const firebaseConfig = {
@@ -108,7 +204,19 @@ const rooms=["ALFA","OMEGA"];
 const pad=n=>String(n).padStart(2,"0");
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
 $("date").value=today(); $("filterDate").value=today();
-for(let h=8;h<=18;h++){const val=pad(h)+":00";$("start").add(new Option(val,val));$("end").add(new Option(val,val))}
+for (let h = 7; h <= 18; h++) {
+  for (let m of [0, 30]) {
+    if (h === 18 && m === 30) continue;
+
+    const val = pad(h) + ":" + pad(m);
+
+    if (val !== "18:00") {
+      $("start").add(new Option(val, val));
+    }
+
+    $("end").add(new Option(val, val));
+  }
+}
 $("start").value="09:00";$("end").value="10:00";
 function showView(name){["home","book","list","admin"].forEach(v=>$(v+"View").classList.toggle("hidden",v!==name));document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===name));if(name==="list")renderAll();if(name==="admin")renderAdmin()}
 window.showView=showView;
@@ -123,31 +231,228 @@ function render(){
  $("busyNow").textContent=active.length;$("available").textContent=2-new Set(active.map(x=>x.room)).size;
  $("todayCount").textContent=bookings.filter(x=>x.date===date).length;
  $("roomCards").innerHTML=rooms.map(r=>{const b=active.find(x=>x.room===r);return `<div class="roomcard"><div><h3>Sala ${r}</h3><p>${b?"Ocupată până la "+esc(b.end):"Disponibilă"}</p></div><b><i class="dot ${b?"busy":""}"></i>${b?"Ocupată":"Liberă"}</b></div>`}).join("");
- const upcoming=bookings.filter(x=>x.date>=date).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).slice(0,5);
+ const upcoming = bookings
+  .filter(x =>
+    x.date > date ||
+    (x.date === date && x.end > now)
+  )
+  .sort((a, b) =>
+    (a.date + a.start).localeCompare(b.date + b.start)
+  )
+  .slice(0, 5);
  $("upcoming").innerHTML=upcoming.length?upcoming.map(card).join(""):'<p class="small">Nu există rezervări viitoare.</p>';
  renderAll();renderAdmin();checkAvailability();
 }
 function card(x){return `<div class="booking"><strong>Sala ${esc(x.room)} · ${esc(x.date)}</strong><span>${esc(x.start)}–${esc(x.end)} · ${esc(x.person)}${x.purpose?" · "+esc(x.purpose):""}</span></div>`}
-function renderAll(){
- const date=$("filterDate").value,room=$("filterRoom").value;
- const list=bookings.filter(x=>(!date||x.date===date)&&(!room||x.room===room)).sort((a,b)=>a.start.localeCompare(b.start));
- $("allBookings").innerHTML=list.length?list.map(x=>card(x)+(isAdmin?`<button class="secondary" data-delete="${x.id}">Anulează rezervarea</button>`:"")).join(""):'<p class="small">Nicio rezervare găsită.</p>';
- $("allBookings").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>removeBooking(b.dataset.delete));
+function renderAll() {
+  const selectedDate = $("filterDate").value;
+  const selectedRoom = $("filterRoom").value;
+
+  const nowDate = today();
+  const nowTime = timeNow();
+
+  const filtered = bookings.filter(x =>
+    (!selectedDate || x.date === selectedDate) &&
+    (!selectedRoom || x.room === selectedRoom)
+  );
+
+  const active = filtered.filter(x =>
+    x.date > nowDate ||
+    (x.date === nowDate && x.end > nowTime)
+  );
+
+  const archived = filtered.filter(x =>
+    x.date < nowDate ||
+    (x.date === nowDate && x.end <= nowTime)
+  );
+
+  const sortBookings = (a, b) =>
+    (a.date + a.start).localeCompare(b.date + b.start);
+
+  active.sort(sortBookings);
+  archived.sort(sortBookings).reverse();
+
+  $("allBookings").innerHTML = active.length
+    ? active.map(x =>
+        card(x) +
+        (isAdmin
+          ? `<button class="secondary" data-delete="${x.id}">
+               Anulează rezervarea
+             </button>`
+          : "")
+      ).join("")
+    : '<p class="small">Nu există rezervări active.</p>';
+
+  $("bookingArchive").innerHTML = archived.length
+    ? archived.map(card).join("")
+    : '<p class="small">Nu există rezervări în arhivă.</p>';
+
+  $("allBookings")
+    .querySelectorAll("[data-delete]")
+    .forEach(b => {
+      b.onclick = () => removeBooking(b.dataset.delete);
+    });
 }
 $("filterDate").onchange=renderAll;$("filterRoom").onchange=renderAll;
 function renderAdmin(){if(!$("adminTools").classList.contains("hidden")){$("adminBookings").innerHTML=bookings.length?bookings.slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start)).map(x=>`<div class="booking"><strong>${esc(x.room)} · ${esc(x.date)} · ${esc(x.start)}–${esc(x.end)}</strong><span>${esc(x.person)} ${x.purpose?"· "+esc(x.purpose):""}</span><button class="secondary" data-delete="${x.id}">Șterge</button></div>`).join(""):'<p class="small">Nu există rezervări.</p>';$("adminBookings").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>removeBooking(b.dataset.delete))}}
 async function removeBooking(id){if(!isAdmin||!confirm("Sigur anulezi această rezervare?"))return;try{await deleteDoc(doc(db,"bookings",id))}catch(e){alert("Nu s-a putut șterge rezervarea: "+e.message)}}
-function checkAvailability(){const r=$("room").value,d=$("date").value,s=$("start").value,e=$("end").value;const bad=!d||s>=e||conflict(r,d,s,e);$("availabilityMessage").textContent=bad?"Interval invalid sau ocupat. Alege alt interval.":"Interval disponibil."; $("availabilityMessage").style.color=bad?"#b93838":"#16834a"}
+function toMinutes(time) {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function toTime(minutes) {
+  return pad(Math.floor(minutes / 60)) +
+    ":" + pad(minutes % 60);
+}
+
+function suggestFreeSlots(room, date, start, end) {
+  const duration = toMinutes(end) - toMinutes(start);
+  const suggestions = [];
+
+  if (duration <= 0) return suggestions;
+
+  for (
+    let minute = 7 * 60;
+    minute + duration <= 18 * 60;
+    minute += 30
+  ) {
+    const newStart = toTime(minute);
+    const newEnd = toTime(minute + duration);
+
+    if (date === today() && newStart < timeNow()) {
+      continue;
+    }
+
+    if (!conflict(room, date, newStart, newEnd)) {
+      suggestions.push({
+        start: newStart,
+        end: newEnd
+      });
+    }
+  }
+
+  return suggestions.slice(0, 3);
+}
+
+function checkAvailability() {
+  const room = $("room").value;
+  const date = $("date").value;
+  const start = $("start").value;
+  const end = $("end").value;
+  const message = $("availabilityMessage");
+
+  if (
+    !date ||
+    date < today() ||
+    start >= end ||
+    start < "07:00" ||
+    end > "18:00" ||
+    (date === today() && start < timeNow())
+  ) {
+    message.textContent = "Interval invalid sau deja trecut.";
+    message.style.color = "#b93838";
+    return;
+  }
+
+  if (!conflict(room, date, start, end)) {
+    message.textContent = "Interval disponibil!";
+    message.style.color = "#16834a";
+    return;
+  }
+
+  const suggestions = suggestFreeSlots(
+    room, date, start, end
+  );
+
+  message.style.color = "#b93838";
+
+  if (!suggestions.length) {
+    message.textContent =
+      "Interval ocupat. Nu există alte intervale " +
+      "libere pentru această durată.";
+    return;
+  }
+
+  message.innerHTML =
+    "<strong>Interval ocupat! Încearcă:</strong><br>" +
+    suggestions.map(slot =>
+      `<button type="button" class="secondary"
+        style="margin:6px 6px 0 0"
+        data-start="${slot.start}"
+        data-end="${slot.end}">
+        ${slot.start}–${slot.end}
+      </button>`
+    ).join("");
+
+  message.querySelectorAll("[data-start]").forEach(btn => {
+    btn.onclick = () => {
+      $("start").value = btn.dataset.start;
+      $("end").value = btn.dataset.end;
+      checkAvailability();
+    };
+  });
+}
 ["room","date","start","end"].forEach(id=>$(id).onchange=checkAvailability);
 $("bookingForm").onsubmit=async e=>{e.preventDefault();if(!db){alert("Mai întâi conectează Firebase. Urmează README.");return}
  const x={room:$("room").value,date:$("date").value,start:$("start").value,end:$("end").value,person:$("person").value.trim(),purpose:$("purpose").value.trim()};
- if(!x.date||x.start>=x.end||conflict(x.room,x.date,x.start,x.end)){alert("Intervalul nu este disponibil. Alege altul.");return}
+if (
+  !x.date ||
+  x.date < today() ||
+  x.start < "07:00" ||
+  x.end > "18:00" ||
+  x.start >= x.end ||
+  conflict(x.room, x.date, x.start, x.end)
+) {
+  alert("Intervalul nu este disponibil. Alege altul.");
+  return;
+}
  if(x.date===today()&&x.start<timeNow()){alert("Nu poți rezerva un interval deja început.");return}
  try{await addDoc(collection(db,"bookings"),{...x,createdAt:serverTimestamp()});$("bookingForm").reset();$("date").value=today();$("start").value="09:00";$("end").value="10:00";alert("Rezervare confirmată!");showView("home")}catch(err){alert("Eroare la salvare: "+err.message)}
 };
 $("loginForm").onsubmit=async e=>{e.preventDefault();if(!auth){alert("Configurează Firebase mai întâi.");return}try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value)}catch(err){alert("Autentificare eșuată. Verifică emailul și parola.")}};
 $("logout").onclick=()=>signOut(auth);
-function setAdmin(user){isAdmin=user?.uid==="0QTuxd5hr5QH8414MHqBN4rv4Tm2";$("adminLogin").classList.toggle("hidden",isAdmin);$("adminTools").classList.toggle("hidden",!isAdmin);$("accountBox").innerHTML=isAdmin?'Conectat ca<br><b>Administrator</b><br><span class="small">'+esc(user.email)+'</span>':'Mod vizitator<br><b>Rezervări săli</b><br><span class="small">Program: 08:00–18:00</span>';renderAll();renderAdmin()}
+$("changePasswordForm").onsubmit = async e => {
+  e.preventDefault();
+
+  if (!isAdmin || !auth.currentUser) {
+    alert("Trebuie să fii conectat ca administrator.");
+    return;
+  }
+
+  const oldPassword = $("oldPassword").value;
+  const newPassword = $("newPassword").value;
+  const confirmPassword = $("confirmPassword").value;
+
+  if (newPassword !== confirmPassword) {
+    alert("Parolele noi nu coincid.");
+    return;
+  }
+
+  if (newPassword.length < 12) {
+    alert("Parola nouă trebuie să aibă minimum 12 caractere.");
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+
+    const credential = EmailAuthProvider.credential(
+      user.email,
+      oldPassword
+    );
+
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
+
+    $("changePasswordForm").reset();
+
+    alert("Parola a fost schimbată cu succes!");
+  } catch (error) {
+    alert("Nu s-a putut schimba parola. Verifică parola actuală.");
+  }
+};
+function setAdmin(user){isAdmin=user?.uid==="0QTuxd5hr5QH8414MHqBN4rv4Tm2";$("adminLogin").classList.toggle("hidden",isAdmin);$("adminTools").classList.toggle("hidden",!isAdmin);$("accountBox").innerHTML=isAdmin?'Conectat ca<br><b>Administrator</b><br><span class="small">'+esc(user.email)+'</span>':'Mod vizitator<br><b>Rezervări săli</b><br><span class="small">Program: 07:00–18:00</span>';renderAll();renderAdmin()}
 
 if(configured){
  try{const app=initializeApp(firebaseConfig);db=getFirestore(app);auth=getAuth(app);$("notice").classList.add("hidden");
@@ -155,6 +460,7 @@ if(configured){
  onAuthStateChanged(auth,setAdmin);
  }catch(e){$("notice").textContent="Configurarea Firebase are o eroare: "+e.message}
 }else{$("notice").textContent="pt rezervari o sa folosim firebare"}
+setInterval(render, 15000);
 render();
 </script>
 </body>
